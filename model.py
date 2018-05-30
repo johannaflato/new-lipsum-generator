@@ -18,11 +18,11 @@ class Model():
         self._init_session()
         
     def _build_graph(self):
-        self.global_step = tf.Variable(36420, trainable=False)
+        self.global_step = tf.Variable(0, trainable=False)
         self._initialize_placeholders()
         self._model()
         self.init = tf.global_variables_initializer()
-        self.saver = tf.train.Saver(max_to_keep=20)
+        self.saver = tf.train.Saver(max_to_keep=3)
 
     def _initialize_placeholders(self):
         self.input_seq = self.helper.input_seq
@@ -54,16 +54,18 @@ class Model():
             dec_cell = tf.contrib.rnn.MultiRNNCell([dec_cell] * 2)
 
             if self.mode == 'train':
-                dec_emb_inp = tf.nn.embedding_lookup(self.embedding, self.target_seq[:, :-1])
+                dec_emb_inp = tf.nn.embedding_lookup(self.embedding, self.target_seq)
                 decoder_helper = tf.contrib.seq2seq.TrainingHelper(dec_emb_inp, self.target_len)
+                max_iter = None
             elif self.mode == 'infer':
                 start_tokens = tf.fill([tf.shape(self.input_seq)[0]], self.helper.sos_id)
                 end_token = self.helper.eos_id
                 # decoder_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(self.embedding, start_tokens, end_token)
                 decoder_helper = tf.contrib.seq2seq.SampleEmbeddingHelper(self.embedding, start_tokens, end_token)
+                max_iter = 2 * tf.shape(self.input_seq)[1]
 
             decoder = tf.contrib.seq2seq.BasicDecoder(dec_cell, decoder_helper, encoder_state, output_layer=tf.layers.Dense(self.vocab_size))
-            outputs, final_state, _ = tf.contrib.seq2seq.dynamic_decode(decoder, maximum_iterations=2*self.input_len[0], scope=decoder_scope)
+            outputs, final_state, _ = tf.contrib.seq2seq.dynamic_decode(decoder, maximum_iterations=max_iter, scope=decoder_scope)
         return outputs, final_state
 
     def _compute_loss(self):

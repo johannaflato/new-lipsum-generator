@@ -4,7 +4,7 @@ import glob
 import nltk
 from collections import namedtuple
 
-batch_size = 16
+batch_size = 32
 
 
 class Helper(namedtuple("Helper", ("initializer", "input_seq", "input_len", "target_seq", "target_len", "ix_to_char", "char_to_ix", "sos_id", "eos_id", "batch_size"))):
@@ -12,8 +12,8 @@ class Helper(namedtuple("Helper", ("initializer", "input_seq", "input_len", "tar
 
 
 def build_helper():
-    # files = glob.glob('data/*.txt')
-    files = glob.glob('old_stuff/_FULL.txt')
+    files = glob.glob('data/*.txt')
+    # files = glob.glob('old_stuff/_FULL.txt')
     print('Loaded {} files'.format(len(files)))
     data_pairs = []
     vocab = set(['<', '>'])
