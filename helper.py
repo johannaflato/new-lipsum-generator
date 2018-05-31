@@ -4,7 +4,7 @@ import glob
 import nltk
 from collections import namedtuple
 
-batch_size = 32
+batch_size = 1
 
 
 class Helper(namedtuple("Helper", ("initializer", "input_seq", "input_len", "target_seq", "target_len", "ix_to_char", "char_to_ix", "sos_id", "eos_id", "batch_size"))):
@@ -28,6 +28,7 @@ def build_helper():
     print('Created {} pairs'.format(len(data_pairs)))
     
     vocab = sorted(vocab)
+    print(len(vocab))
     ix_to_char = { i: ch for i, ch in enumerate(vocab)}
     char_to_ix = { ch: i for i, ch in ix_to_char.items() }
     sos_id = char_to_ix['<']

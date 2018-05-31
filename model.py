@@ -25,16 +25,22 @@ class Model():
         self.saver = tf.train.Saver(max_to_keep=3)
 
     def _initialize_placeholders(self):
-        self.input_seq = self.helper.input_seq
-        self.input_len = self.helper.input_len
-        self.target_seq = self.helper.target_seq
-        self.target_len = self.helper.target_len
+        if self.mode=='train':
+            self.input_seq = self.helper.input_seq
+            self.input_len = self.helper.input_len
+            self.target_seq = self.helper.target_seq
+            self.target_len = self.helper.target_len
+        else:
+            self.input_raw = tf.placeholder(tf.int32, shape=(None))
+            self.input_seq = tf.reshape(self.input_raw, (1, -1))
+            self.input_len = [tf.shape(self.input_seq, out_type=tf.int32)[1]]
         
     def _model(self):
         self.embedding = tf.get_variable("embedding", [self.vocab_size, self.h_size])
         encoder_outputs, encoder_state= self._build_encoder()
         self.outputs, final_state= self._build_decoder(encoder_state)
-        self._compute_loss()
+        if self.mode == 'train':
+            self._compute_loss()
         
     def _build_encoder(self):
         with tf.variable_scope("encoder") as encoder_scope:
@@ -62,7 +68,7 @@ class Model():
                 end_token = self.helper.eos_id
                 # decoder_helper = tf.contrib.seq2seq.GreedyEmbeddingHelper(self.embedding, start_tokens, end_token)
                 decoder_helper = tf.contrib.seq2seq.SampleEmbeddingHelper(self.embedding, start_tokens, end_token)
-                max_iter = 2 * tf.shape(self.input_seq)[1]
+                max_iter = 10 * tf.shape(self.input_seq)[1]
 
             decoder = tf.contrib.seq2seq.BasicDecoder(dec_cell, decoder_helper, encoder_state, output_layer=tf.layers.Dense(self.vocab_size))
             outputs, final_state, _ = tf.contrib.seq2seq.dynamic_decode(decoder, maximum_iterations=max_iter, scope=decoder_scope)
@@ -70,9 +76,10 @@ class Model():
 
     def _compute_loss(self):
         self.logits = self.outputs.rnn_output
-        cross_ent = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.target_seq[:, 1:], logits=self.logits)
+        # cross_ent = tf.nn.sparse_softmax_cross_entropy_with_logits(labels=self.target_seq[:, 1:], logits=self.logits)
         target_weights = tf.sequence_mask(self.target_len, dtype=self.logits.dtype)
-        self.loss = tf.reduce_sum(cross_ent * target_weights) / tf.to_float(self.target_len) / self.helper.batch_size
+        # self.loss = tf.reduce_sum(cross_ent * target_weights) / tf.to_float(self.target_len) / self.helper.batch_size
+        self.loss = tf.contrib.seq2seq.sequence_loss(logits=self.logits, targets=self.target_seq[:, 1:], weights=target_weights)
         
         params = tf.trainable_variables()
         gradients = tf.gradients(self.loss, params)
